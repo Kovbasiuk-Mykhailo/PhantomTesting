@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.NodeServices;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace PhantomTesting
 {
@@ -16,8 +16,8 @@ namespace PhantomTesting
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
+                .AddJsonFile("appsettings.json", false, true)
+                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", true)
                 .AddEnvironmentVariables();
             Configuration = builder.Build();
         }
@@ -29,10 +29,12 @@ namespace PhantomTesting
         {
             // Add framework services.
             services.AddMvc();
+            services.AddNodeServices();
+            services.AddMemoryCache();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IMemoryCache cache, INodeServices nodeServices)
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
@@ -52,9 +54,21 @@ namespace PhantomTesting
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
+                    "default",
+                    "{controller=Home}/{action=Index}/{id?}");
             });
+
+            WriteTestScriptsToCache(cache, nodeServices);
+        }
+
+        private static void WriteTestScriptsToCache(IMemoryCache cache, INodeServices nodeServices)
+        {
+            var entryOptions = new MemoryCacheEntryOptions().SetPriority(CacheItemPriority.NeverRemove);
+            var result = JObject.Parse(nodeServices.InvokeAsync<string>("NodeScripts/ReadScripts.js").GetAwaiter().GetResult());
+            var scripts = result["scripts"];
+            var dictObj = scripts.ToObject<Dictionary<string, string>>();
+            dictObj.Remove("test");
+            cache.Set("scripts", dictObj, entryOptions);
         }
     }
 }
