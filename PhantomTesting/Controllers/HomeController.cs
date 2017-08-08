@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -77,19 +78,34 @@ namespace PhantomTesting.Controllers
                 TestCases = new List<TestCase>()
             };
 
-            foreach (var tc in ts.testsuite.testcase)
+            try
             {
-                var testCase = new TestCase
+                foreach (var tc in ts.testsuite?.testcase ?? Enumerable.Empty <testsuitesTestsuiteTestcase>())
                 {
-                    ClassName = tc.classname,
-                    Failure = tc.failure.Value,
-                    Name = tc.name,
-                    TestCaseRunTime = tc.time
-                };
-                testCase.FailureImageUrl = GetFailureImageUrl(testCase);
-                testCase.ExpectedImageUrl = GetExpectedImageUrl(testCase);
-                testResult.TestCases.Add(testCase);
+                    if (tc != null)
+                    {
+                        var testCase = new TestCase
+                        {
+                            ClassName = tc.classname,
+                            Name = tc.name,
+                            TestCaseRunTime = tc.time
+                        };
+
+                        if (tc.failure != null)
+                        {
+                            testCase.Failure = tc.failure.Value;
+                            testCase.FailureImageUrl = GetFailureImageUrl(testCase);
+                            testCase.ExpectedImageUrl = GetExpectedImageUrl(testCase);
+                        }
+                        testResult.TestCases.Add(testCase);
+                    }
+                }
             }
+            catch (Exception ex)
+            {
+                throw;
+            }
+          
 
             return testResult;
         }
