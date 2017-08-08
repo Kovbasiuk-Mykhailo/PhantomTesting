@@ -6,6 +6,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.IO;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.FileProviders;
 using Newtonsoft.Json.Linq;
 
 namespace PhantomTesting
@@ -50,6 +53,14 @@ namespace PhantomTesting
             }
 
             app.UseStaticFiles();
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider =
+                    new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), @"regression-tests",
+                        @"testsuites")),
+                RequestPath = new PathString("/tests/testsuites")
+            });
 
             app.UseMvc(routes =>
             {

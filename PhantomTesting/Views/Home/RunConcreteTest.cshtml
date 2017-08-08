@@ -1,3 +1,7 @@
-﻿@{
+﻿@model PhantomTesting.Models.TestResultModel
+@{
     ViewData["Title"] = "Concrete tests result";
-}
+}                                           
+
+<img src="@Model.TestCases[0].ExpectedImageUrl" alt="Alternate Text" />
+<img src="@Model.TestCases[0].FailureImageUrl" alt="Alternate Text" />
