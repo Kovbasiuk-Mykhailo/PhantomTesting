@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
@@ -30,11 +32,16 @@ namespace PhantomTesting.Controllers
 
         public async Task<IActionResult> RunAllTests([FromServices] INodeServices nodeServices)
         {
-            var result = await nodeServices.InvokeAsync<bool>("NodeScripts/RunTest.js", "test");
-            
+            await nodeServices.InvokeAsync<bool>("NodeScripts/RunTest.js", "test");
 
+            var testResults = Directory
+                .EnumerateFiles(_hostingEnvironment.ContentRootPath + "/regression-tests/Reports/LoginState", "*.xml")
+                .Select(GetTestResult).ToList();
+            testResults.AddRange(Directory
+                .EnumerateFiles(_hostingEnvironment.ContentRootPath + "/regression-tests/Reports/NotLoginState",
+                    "*.xml").Select(GetTestResult));
 
-            return View();
+            return View(testResults);
         }
 
         public async Task<IActionResult> RunConcreteTest([FromServices] INodeServices nodeServices, string scriptName)
@@ -47,11 +54,16 @@ namespace PhantomTesting.Controllers
             string contentRootPath = _hostingEnvironment.ContentRootPath + "/regression-tests" +
                                      Regex.Match(script, "xunit=(.*)").Groups[1];
 
+            return View(GetTestResult(contentRootPath));
+        }
+
+        private TestResultModel GetTestResult(string filePath)
+        {
             XmlSerializer ser = new XmlSerializer(typeof(testsuites));
             testsuites ts;
-            using (XmlReader reader = XmlReader.Create(contentRootPath))
+            using (XmlReader reader = XmlReader.Create(filePath))
             {
-                ts = (testsuites)ser.Deserialize(reader);
+                ts = (testsuites) ser.Deserialize(reader);
             }
 
             var testResult = new TestResultModel
@@ -76,13 +88,13 @@ namespace PhantomTesting.Controllers
                 };
                 testCase.FailureImageUrl = GetFailureImageUrl(testCase);
                 testCase.ExpectedImageUrl = GetExpectedImageUrl(testCase);
-                testResult.TestCases.Add(testCase);                
+                testResult.TestCases.Add(testCase);
             }
 
-            return View(testResult);
+            return testResult;
         }
 
-        private string GetFailureImageUrl(TestCase tc) 
+        private string GetFailureImageUrl(TestCase tc)
         {
             string imagePath = string.Empty;
 
