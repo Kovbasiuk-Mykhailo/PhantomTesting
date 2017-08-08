@@ -32,7 +32,10 @@ namespace PhantomTesting
         {
             // Add framework services.
             services.AddMvc();
-            services.AddNodeServices();
+            services.AddNodeServices(options =>
+            {
+                options.InvocationTimeoutMilliseconds = 600000;
+            });
             services.AddMemoryCache();
         }
 
@@ -79,6 +82,10 @@ namespace PhantomTesting
             var scripts = result["scripts"];
             var dictObj = scripts.ToObject<Dictionary<string, string>>();
             dictObj.Remove("test");
+            dictObj.Remove("test-popups");
+            dictObj.Remove("test-users-scenario");
+            dictObj.Remove("test-not-login-state");
+            dictObj.Remove("test-login-state");
             cache.Set("scripts", dictObj, entryOptions);
         }
     }

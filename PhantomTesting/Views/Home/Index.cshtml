@@ -7,7 +7,23 @@
 <hr />
 
 <button type="button">
-    @Html.ActionLink("Run all tests", "RunAllTests", "Home")
+    @Html.ActionLink("Run tests", "RunCompaundTests", "Home", new { scriptName = "test" })
+</button>
+
+<button type="button">
+    @Html.ActionLink("Run popusps tests", "RunCompaundTests", "Home", new { scriptName = "test-popups" })
+</button>
+
+<button type="button">
+    @Html.ActionLink("Run users scenario tests", "RunCompaundTests", "Home", new { scriptName = "test-users-scenario" })
+</button>
+
+<button type="button">
+    @Html.ActionLink("Run not login state tests", "RunCompaundTests", "Home", new { scriptName = "test-not-login-state" })
+</button>
+
+<button type="button">
+    @Html.ActionLink("Run login state tests", "RunCompaundTests", "Home", new { scriptName = "test-login-state" })
 </button> 
 
 <hr />                       

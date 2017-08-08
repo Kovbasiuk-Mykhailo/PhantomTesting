@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -31,9 +30,9 @@ namespace PhantomTesting.Controllers
             return View(scripts);
         }
 
-        public async Task<IActionResult> RunAllTests([FromServices] INodeServices nodeServices)
+        public async Task<IActionResult> RunCompaundTests([FromServices] INodeServices nodeServices, string scriptName)
         {
-            await nodeServices.InvokeAsync<bool>("NodeScripts/RunTest.js", "test");
+            await nodeServices.InvokeAsync<bool>("NodeScripts/RunTest.js", scriptName);
 
             var testResults = Directory
                 .EnumerateFiles(_hostingEnvironment.ContentRootPath + "/regression-tests/Reports/LoginState", "*.xml")
@@ -52,10 +51,15 @@ namespace PhantomTesting.Controllers
 
             var script = scripts[scriptName];
 
-            string contentRootPath = _hostingEnvironment.ContentRootPath + "/regression-tests" +
-                                     Regex.Match(script, "xunit=(.*)").Groups[1];
+            if (Regex.Match(script, "xunit=(.*)").Success)
+            {
+                string contentRootPath = _hostingEnvironment.ContentRootPath + "/regression-tests" +
+                                         Regex.Match(script, "xunit=(.*)").Groups[1];
 
-            return View(GetTestResult(contentRootPath));
+                return View(GetTestResult(contentRootPath));
+            }
+
+            return BadRequest();
         }
 
         private TestResultModel GetTestResult(string filePath)
@@ -78,34 +82,24 @@ namespace PhantomTesting.Controllers
                 TestCases = new List<TestCase>()
             };
 
-            try
+            foreach (var tc in ts.testsuite?.testcase ?? Enumerable.Empty<testsuitesTestsuiteTestcase>())
             {
-                foreach (var tc in ts.testsuite?.testcase ?? Enumerable.Empty <testsuitesTestsuiteTestcase>())
+                if (tc == null) continue;
+                var testCase = new TestCase
                 {
-                    if (tc != null)
-                    {
-                        var testCase = new TestCase
-                        {
-                            ClassName = tc.classname,
-                            Name = tc.name,
-                            TestCaseRunTime = tc.time
-                        };
+                    ClassName = tc.classname,
+                    Name = tc.name,
+                    TestCaseRunTime = tc.time
+                };
 
-                        if (tc.failure != null)
-                        {
-                            testCase.Failure = tc.failure.Value;
-                            testCase.FailureImageUrl = GetFailureImageUrl(testCase);
-                            testCase.ExpectedImageUrl = GetExpectedImageUrl(testCase);
-                        }
-                        testResult.TestCases.Add(testCase);
-                    }
+                if (tc.failure != null)
+                {
+                    testCase.Failure = tc.failure.Value;
+                    testCase.FailureImageUrl = GetFailureImageUrl(testCase);
+                    testCase.ExpectedImageUrl = GetExpectedImageUrl(testCase);
                 }
+                testResult.TestCases.Add(testCase);
             }
-            catch (Exception ex)
-            {
-                throw;
-            }
-          
 
             return testResult;
         }
